@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<b><h2 style="color: red; text-decoration: underline;">Signup page</h2></b>
+
+
+{% with messages = get_flashed_messages(with_categories=True) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<form action="{{ url_for('users.signup') }}" method="POST">
+    {{ form.hidden_tag() }}
+
+    <fieldset>
+
+
+        {% for message in form.username.errors %}
+            <div class="error">{{ message }}</div>
+        {% endfor %}
+
+        {% for message in form.email.errors %}
+            <div class="error">{{ message }}</div>
+        {% endfor %}
+
+        {% for field in [form.password, form.gender, form.address, form.mobile_no, form.role] %}
+            {% for message in field.errors %}
+                <div class="error">{{ message }}</div>
+            {% endfor %}
+        {% endfor %}
+
+        <br>
+
+        {{ form.username.label }} {{ form.username }} <br>
+        {{ form.email.label }} {{ form.email }} <br>
+        {{ form.password.label }} {{ form.password }} <br>
+        {{ form.gender.label }} {{ form.gender }} <br>
+        {{ form.address.label }} {{ form.address }} <br>
+        {{ form.mobile_no.label }} {{ form.mobile_no }} <br>
+        {{ form.role.label }} {{ form.role }} <br>
+        {{ form.submit }}
+
+    </fieldset>
+</form>
+
+<br>
+<a href="{{ url_for('users.login') }}">Login</a>
+
+{% endblock %}

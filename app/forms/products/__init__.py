@@ -1,0 +1,1 @@
+from app.forms.products.product import Product

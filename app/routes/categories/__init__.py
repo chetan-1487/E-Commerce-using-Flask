@@ -1,0 +1,1 @@
+from app.routes.categories.category import category_bp
