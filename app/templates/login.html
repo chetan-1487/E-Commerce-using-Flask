@@ -2,5 +2,34 @@
 
 {% block content %}
   <b><h2 style="color: red; text-decoration: underline;">Login Form</h2></b>
+
+  {% with messages = get_flashed_messages() %}
+      {% for message in messages %}
+        {% if message %}
+          {{message}}
+        {% endif %}
+      {% endfor %}
+    {% endwith %}
+      
+
+  <form action="/login" method="post">
+    {{ form.hidden_tag() }}
+
+    {% for message in form.email.errors %}
+      <div class="error">{{ message }}</div>
+    {%  endfor %}
+    {% for message in form.password.errors %}
+      <div class="error">{{ message }}</div>
+    {% endfor %}
+
+    {{form.email.label}} {{form.email}}
+    {{form.password.label}} {{form.password}}
+    {{form.submit}}
+  
+  </form>
+
+  <br />
   <a href="/" type="button">Signup</a>
+  <br />
+  <a href="/forgot-password" type="button">forgot password</a>
 {% endblock %}
