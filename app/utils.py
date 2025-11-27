@@ -1,18 +1,15 @@
-import random
 import re
 
-def generateOtp():
-  return "otp"
 
 def is_valid_username(username: str) -> bool:
-   
-   pattern = r"""
+
+    pattern = r"""
         ^(?=.*[A-Z])
         ^(?=.*[a-z])
         ^(?=.*\d)
     """
 
-   return bool(re.match(pattern,username, re.VERBOSE))
+    return bool(re.match(pattern, username, re.VERBOSE))
 
 
 def is_valid_password(password: str) -> bool:

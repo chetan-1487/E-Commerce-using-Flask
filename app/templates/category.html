@@ -3,5 +3,12 @@
 {% block content %}
   <h1>Categories</h1>
 
+  {% if category %}
+      <h3>your categories</h3>
+
+  {% endif %}
+
+  <a href="/all" type="button">user details</a> </br>
+
   <a href="/logout" >Logout</a>
 {% endblock %}

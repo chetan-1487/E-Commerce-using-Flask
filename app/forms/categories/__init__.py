@@ -1,1 +1,1 @@
-from app.forms.categories.category import Category
+from app.forms.categories.category import categoryForm

@@ -1,6 +1,7 @@
 from app.extension import db
 from datetime import datetime
 
+
 class Product(db.Model):
     __tablename__ = "product"
 

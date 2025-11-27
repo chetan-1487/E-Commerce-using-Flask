@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2 style="color: blue;">User Details:</h2>
+
+  <table border="1">
+    <tr>
+      <th>Username</th>
+      <th>Email</th>
+      <th>Roles</th>
+    </tr>
+    {% for user in form %}
+    <tr>
+        <td>{{user.username}}</td>
+        <td>{{user.email}}</td>
+        <td>{{user.role.split(",")}}</td>
+    </tr>
+    {% endfor %}
+  </table>
+
+{% endblock %}

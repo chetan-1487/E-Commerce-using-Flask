@@ -1,1 +1,1 @@
-from app.forms.users.user import userForm, loginForm, resetPassword, forgotPassword
+from app.forms.users.user import userForm, loginForm, forgotPassword

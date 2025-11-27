@@ -2,6 +2,25 @@
 
 {% block content %}
 
-<h1>forgot password</h1>
+<h1 style="color: red; text-decoration: underline;">Forgot Password</h1>
+
+{% with messages = get_flashed_messages() %}
+  {% for message in messages %}
+    {% if message %}
+      {{message}}
+    {% endif %}
+  {% endfor %}
+{% endwith %}
+
+<form action="/forgot-password" method="POST">
+
+  {{form.email.label}}  {{form.email}} </br>
+  {{form.current_password.label}} {{form.current_password}}  </br>
+  {{form.new_password.label}} {{form.new_password}}  </br>
+  {{form.confirm_password.label}} {{form.confirm_password}}  </br>
+  {{form.submit}}
+
+</form>
+<a href="/login" type="button">Login</a>
 
 {% endblock %}
