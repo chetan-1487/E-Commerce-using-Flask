@@ -19,6 +19,7 @@ from flask_jwt_extended import (
     create_refresh_token,
     get_jwt_identity,
     get_jwt,
+    unset_refresh_cookies
 )
 from app.utils import is_valid_password, is_valid_username
 from app.routes.categories import category_bp
@@ -175,6 +176,7 @@ def forgot_password():
 def logout():
     response = make_response(redirect(url_for("users.login")))
     unset_access_cookies(response)
+    unset_refresh_cookies(response)
     return response
 
 
