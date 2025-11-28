@@ -8,20 +8,23 @@ from app.routes.products import product_bp
 from app.models.categories.category import Category
 from app.models.products.product import Product
 
-app = Flask(__name__)
+def createApp(test_config=None):
 
-app.config.from_object(Config)
+    app = Flask(__name__)
 
-db.init_app(app)
-migrate.init_app(app, db)
-jwt.init_app(app)
+    app.config.from_object(Config)
 
-app.register_blueprint(user_bp)
-app.register_blueprint(category_bp)
-app.register_blueprint(product_bp)
+    db.init_app(app)
+    migrate.init_app(app, db)
+    jwt.init_app(app)
+
+    app.register_blueprint(user_bp)
+    app.register_blueprint(category_bp)
+    app.register_blueprint(product_bp)
+
+    return app
 
 
 if __name__ == "__main__":
-    app.debug = True
-    app.run()
+    app = createApp()
     app.run(debug=True)
