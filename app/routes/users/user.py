@@ -5,7 +5,6 @@ from flask import (
     request,
     make_response,
     url_for,
-    Response,
     flash,
     jsonify,
 )
@@ -19,15 +18,34 @@ from flask_jwt_extended import (
     create_refresh_token,
     get_jwt_identity,
     get_jwt,
-    unset_refresh_cookies
+    unset_refresh_cookies,
+    verify_jwt_in_request
 )
 from app.utils import is_valid_password, is_valid_username
 from app.routes.categories import category_bp
-
+from functools import wraps
 
 user_bp = Blueprint(
     "users", __name__, template_folder=".../templates", static_folder=".../static"
 )
+
+def role_require(*roles):
+    def wrapper(fn):
+        @wraps(fn)
+        def decorator(*args, **kwargs):
+            verify_jwt_in_request()
+            user = get_jwt()
+            role = [user.get("roles", [])]
+            if not any(r in roles for r in role):
+                resp = redirect(url_for("users.login"))
+                unset_access_cookies(resp)
+                unset_refresh_cookies(resp)
+                flash("Permission denied. only admin can access")
+                return resp
+            return fn(*args,**kwargs)
+        return decorator
+    return wrapper
+
 
 
 @user_bp.route("/")
@@ -97,13 +115,14 @@ def login():
 
         if bcrypt.check_password_hash(user.password, password):
             access_token = create_access_token(
-                identity=str(user.id), additional_claims={"email": user.email}
+                identity=str(user.id), additional_claims={"email": user.email, "roles": user.role}
             )
             refresh_token = create_refresh_token(
                 identity=str(user.id), additional_claims={"email": user.email}
             )
 
-            response = make_response(redirect(url_for(f"{category_bp.name}.category")))
+            # response = make_response(redirect(url_for(f"{category_bp.name}.category")))
+            response = make_response(redirect(url_for("users.all")))
             response.set_cookie(
                 "access_token_cookie", access_token, httponly=True, samesite="Lax"
             )
@@ -127,7 +146,14 @@ def refreshToken():
     email = claims.get("email")
     id = get_jwt_identity()
     new_token = create_access_token(identity=id, additional_claims={"email": email})
-    return jsonify({"new_token": new_token})
+    new_res= make_response(url_for("users.all"))
+    new_res.set_cookie(
+        "access_token_cookie",
+        new_token,
+        httponly=True,
+        samesite="Lax"
+    )
+    return new_res
 
 
 @user_bp.route("/forgot-password", methods=["GET", "POST"])
@@ -175,14 +201,16 @@ def forgot_password():
 @user_bp.route("/logout")
 def logout():
     response = make_response(redirect(url_for("users.login")))
-    unset_access_cookies(response)
-    unset_refresh_cookies(response)
+    response.delete_cookie("access_token_cookie")
+    response.delete_cookie("refresh_token_cookie")
+    # unset_access_cookies(response)
+    # unset_refresh_cookies(response)
     return response
 
-
 @user_bp.route("/all", methods=["GET"])
-@jwt_required()
+@role_require("admin")
 def all():
     users = User.query.all()
 
     return render_template("result.html", form=users)
+
