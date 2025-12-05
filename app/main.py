@@ -1,7 +1,8 @@
 from flask import Flask
+from flask_cors import CORS
 from app.routes.users import user_bp
 from app.config import Config
-from app.extension import jwt, db, migrate
+from app.extension import jwt, db, migrate, limiter
 from app.routes.categories import category_bp
 from app.routes.products import product_bp
 
@@ -14,6 +15,9 @@ def createApp(test_config=None):
 
     app.config.from_object(Config)
 
+    CORS(app, resources={r"/*":{"origins":"*"}})
+
+    limiter.init_app(app)
     db.init_app(app)
     migrate.init_app(app, db)
     jwt.init_app(app)

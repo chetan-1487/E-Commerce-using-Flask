@@ -6,8 +6,8 @@ from flask import (
     make_response,
     url_for,
     flash,
-    jsonify,
 )
+from app.extension import limiter
 from app.forms.users import userForm, loginForm, forgotPassword
 from app.models.users import User
 from app.extension import db, bcrypt
@@ -98,6 +98,7 @@ def signup():
 
 
 @user_bp.route("/login", methods=["GET", "POST"])
+@limiter.limit("5 per minute")
 def login():
 
     login_form = loginForm()
