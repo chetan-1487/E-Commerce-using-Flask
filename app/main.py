@@ -9,7 +9,7 @@ from app.routes.products import product_bp
 from app.models.categories.category import Category
 from app.models.products.product import Product
 
-def createApp(test_config=None):
+def createApp(test_config=None, testing=False) -> Flask:
 
     app = Flask(__name__)
 

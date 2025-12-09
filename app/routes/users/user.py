@@ -1,14 +1,11 @@
 from flask import (
     Blueprint,
-    render_template,
-    redirect,
     request,
     make_response,
-    url_for,
-    flash,
+    jsonify
 )
+from flask.wrappers import Response
 from app.extension import limiter
-from app.forms.users import userForm, loginForm, forgotPassword
 from app.models.users import User
 from app.extension import db, bcrypt
 from flask_jwt_extended import (
@@ -33,14 +30,13 @@ def role_require(*roles):
     def wrapper(fn):
         @wraps(fn)
         def decorator(*args, **kwargs):
-            verify_jwt_in_request()
+            verify_jwt_in_request(locations=["headers", "cookies"])
             user = get_jwt()
-            role = [user.get("roles", [])]
+            role = user.get("roles", [])
             if not any(r in roles for r in role):
-                resp = redirect(url_for("users.login"))
+                resp = make_response(jsonify({"message":"permission denied"}))
                 unset_access_cookies(resp)
                 unset_refresh_cookies(resp)
-                flash("Permission denied. only admin can access")
                 return resp
             return fn(*args,**kwargs)
         return decorator
@@ -50,104 +46,111 @@ def role_require(*roles):
 
 @user_bp.route("/")
 def main():
-    return redirect(url_for("users.signup"))
+    return jsonify({"message":"App is running"})
 
 
-@user_bp.route("/signup", methods=["GET", "POST"])
-def signup():
-    user = userForm()
+@user_bp.route("/signup", methods=["POST"])
+def signup() -> Response:
 
-    if request.method == "POST" and user.validate_on_submit():
+    data = request.get_json()
 
-        username = user.username.data
-        email = user.email.data
-        password = user.password.data
-        gender = user.gender.data
-        address = user.address.data
-        mobile_no = user.mobile_no.data
-        roles = ",".join(user.role.data)
+    username = data.get("username")
+    email = data.get("email")
+    password = data.get("password")
+    gender = data.get("gender")
+    address = data.get("address")
+    mobile_no = data.get("mobile_no")
+    roles = data.get("role", [])
 
-        userCheck = User.query.filter_by(email=email).first()
-        if userCheck:
-            flash("user already exist")
-            return render_template("signup.html", form=user)
+    userCheck = User.query.filter_by(email=email).first()
+    if userCheck:
+        return jsonify({"message":"user already exist."})
 
-        if not is_valid_username(username):
-            flash("username must be alphanumeric..")
-            return render_template("signup.html", form=user)
+    if not is_valid_username(username):
+        return jsonify({"message":"username must be alphanumeric.."})
 
-        if not is_valid_password(password):
-            flash(
-                "password must have one lowercase, one uppercase, one digit, one special_character, length of 8"
-            )
-            return render_template("signup.html", form=user)
+    if not is_valid_password(password):
+        return jsonify({"message":"password must have one lowercase, one uppercase, one digit, one special_character, length of 8"}),200
 
-        password_hash = bcrypt.generate_password_hash(password).decode("utf-8")
-        userDetail = User(
-            username, email, password_hash, gender, address, mobile_no, roles
-        )
-        db.session.add(userDetail)
-        db.session.commit()
+    password_hash = bcrypt.generate_password_hash(password).decode("utf-8")
+    userDetail = User(
+        username, email, password_hash, gender, address, mobile_no, roles
+    )
+    db.session.add(userDetail)
+    db.session.commit()
 
-        flash("Account created successfully!")
-        return redirect(
-            url_for("users.login")
-        )  # it is used to avoid duplicate form submission
+    return jsonify({
+    "message": "User account created successfully.",
+    "user": {
+        "username": username,
+        "email": email,
+        "gender": gender,
+        "address": address,
+        "mobile_no": mobile_no,
+        "roles": roles,
+        "createdAt": userDetail.createdAt
+        }
+    }), 200
 
-    return render_template("signup.html", form=user)
 
 
 @user_bp.route("/login", methods=["GET", "POST"])
 @limiter.limit("5 per minute")
-def login():
+def login() -> Response:
 
-    login_form = loginForm()
+    data = request.get_json()
+    email = data.get("email")
+    password = data.get("password")
 
-    if request.method == "POST":
+    user = User.query.filter_by(email=email).first()
 
-        email = login_form.email.data
-        password = login_form.password.data
+    if not user:
+        return jsonify({"message":"user not exist"})
 
-        user = User.query.filter_by(email=email).first()
+    if bcrypt.check_password_hash(user.password, password):
+        access_token = create_access_token(
+            identity=str(user.id), additional_claims={"email": user.email, "roles": user.role}
+        )
+        refresh_token = create_refresh_token(
+            identity=str(user.id), additional_claims={"email": user.email}
+        )
 
-        if not user:
-            flash("user doesn't exist.")
-            return redirect(url_for("users.signup"))
+        response = make_response(
+        jsonify({
+            "message": "Login successful",
+            "tokens":{
+                "access_token": access_token,
+                "refresh_token": refresh_token,
+            },
+            "user": {
+                "id": user.id,
+                "email": user.email,
+                "role": user.role
+                }
+            }), 200
+        )
+        
+        response.set_cookie(
+            "access_token_cookie", access_token, httponly=True, samesite="Lax"
+        )
 
-        if bcrypt.check_password_hash(user.password, password):
-            access_token = create_access_token(
-                identity=str(user.id), additional_claims={"email": user.email, "roles": user.role}
-            )
-            refresh_token = create_refresh_token(
-                identity=str(user.id), additional_claims={"email": user.email}
-            )
+        response.set_cookie(
+            "refresh_token_cookie", refresh_token, httponly=True, samesite="Lax"
+        )
 
-            # response = make_response(redirect(url_for(f"{category_bp.name}.category")))
-            response = make_response(redirect(url_for("users.all")))
-            response.set_cookie(
-                "access_token_cookie", access_token, httponly=True, samesite="Lax"
-            )
-
-            response.set_cookie(
-                "refresh_token_cookie", refresh_token, httponly=True, samesite="Lax"
-            )
-
-            return response
-
-        else:
-            flash("Incorrect email or password")
-            return render_template("login.html", form=login_form)
-    return render_template("login.html", form=login_form)
+        return response
+    else:
+        return jsonify({"message":"email and password is incorrect."})
 
 
 @user_bp.route("/refresh-token")
 @jwt_required(refresh=True)
-def refreshToken():
+def refreshToken() -> Response:
     claims = get_jwt()
     email = claims.get("email")
     id = get_jwt_identity()
     new_token = create_access_token(identity=id, additional_claims={"email": email})
-    new_res= make_response(url_for("users.all"))
+    new_res= make_response(jsonify({"message":"new token is generated sucessfully","access token": new_token}),200)
     new_res.set_cookie(
         "access_token_cookie",
         new_token,
@@ -158,60 +161,68 @@ def refreshToken():
 
 
 @user_bp.route("/forgot-password", methods=["GET", "POST"])
-def forgot_password():
-    forgot_form = forgotPassword()
+def forgot_password() ->Response:
 
-    if request.method == "POST":
+    data = request.get_json()
+    email = data.get("email")
+    current_password = data.get("current_password")
+    new_password = data.get("new_password")
+    confirm_password = data.get("confirm_password")
 
-        email = forgot_form.email.data
-        current_password = forgot_form.current_password.data
-        new_password = forgot_form.new_password.data
-        confirm_password = forgot_form.confirm_password.data
+    user = User.query.filter_by(email=email).first()
 
-        user = User.query.filter_by(email=email).first()
+    if not user:
+        return jsonify({"message":"email doesnot exist."})
 
-        if not user:
-            flash("User doesnot exist..")
-            return redirect(url_for("users.signup"))
+    if bcrypt.check_password_hash(user.password, current_password):
 
-        if bcrypt.check_password_hash(user.password, current_password):
+        if new_password == confirm_password:
 
-            if new_password == confirm_password:
+            if not is_valid_password(confirm_password):
+                return jsonify({"message":"password must have one lowercase, one uppercase, one digit, one special_character, length of 8"})
 
-                if not is_valid_password(confirm_password):
-                    flash(
-                        "password must have one lowercase, one uppercase, one digit, one special_character, length of 8"
-                    )
-                    return render_template("signup.html", form=user)
+            has_pass = bcrypt.generate_password_hash(confirm_password).decode(
+                "utf-8"
+            )
+            user.password = has_pass
+            db.session.commit()
 
-                has_pass = bcrypt.generate_password_hash(confirm_password).decode(
-                    "utf-8"
-                )
-                user.password = has_pass
-                db.session.commit()
+            return jsonify({"message":"new password is generated successfully"}),200
+        else:
+            return jsonify({"message":"new and confirm password mismatch."})
+    else:
+        return jsonify({"message":"email and password is incorrect."})
 
-                flash("new password generated successfully..")
-                return redirect(url_for("users.login"))
-
-            flash("new password and confirm password doesnot match")
-            return render_template("forgot.html", form=forgot_form)
-
-    return render_template("forgot.html", form=forgot_form)
 
 
 @user_bp.route("/logout")
-def logout():
-    response = make_response(redirect(url_for("users.login")))
+def logout()->Response:
+    response = make_response(jsonify({"message":"logout successfully"}))
     response.delete_cookie("access_token_cookie")
     response.delete_cookie("refresh_token_cookie")
-    # unset_access_cookies(response)
-    # unset_refresh_cookies(response)
+
     return response
 
 @user_bp.route("/all", methods=["GET"])
 @role_require("admin")
-def all():
+def all() -> Response:
     users = User.query.all()
 
-    return render_template("result.html", form=users)
+    users_list = [
+        {
+            "id": user.id,
+            "email": user.email,
+            "role": user.role,
+            "gender": user.gender,
+            "address":user.address,
+            "mobile_no":user.mobile_no,
+            "created_at": user.createdAt if user.createdAt else None
+        }
+        for user in users
+    ]
+
+    return jsonify({
+        "total": len(users_list),
+        "users": users_list
+    })
 

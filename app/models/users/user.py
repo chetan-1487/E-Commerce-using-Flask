@@ -1,6 +1,6 @@
 from app.extension import db
 from datetime import datetime
-
+from sqlalchemy.dialects.postgresql import ARRAY
 
 class User(db.Model):
     __tablename__ = "users"
@@ -12,12 +12,12 @@ class User(db.Model):
     gender = db.Column(db.String(10), nullable=False)
     address = db.Column(db.String(200), nullable=False)
     mobile_no = db.Column(db.String(10), nullable=False)
-    role = db.Column(db.String(100), default="user")
+    role = db.Column(ARRAY(db.String), default="user")
 
     createdAt = db.Column(db.DateTime, default=datetime.now())
 
     def __init__(
-        self, username, email, password, gender, address, mobile_no, role="user"
+        self, username, email, password, gender, address, mobile_no, role
     ):
         self.username = username
         self.email = email
