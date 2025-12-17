@@ -1,1 +1,1 @@
-from app.models.users.user import User
+from app.models.users.user import User, Gender

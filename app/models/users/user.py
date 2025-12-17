@@ -1,6 +1,13 @@
 from app.extension import db
 from datetime import datetime
 from sqlalchemy.dialects.postgresql import ARRAY
+from enum import Enum
+from sqlalchemy import Enum as postgreenum
+
+class Gender(Enum):
+    Male = "Male"
+    Female = "Female"
+    Others = "Others"
 
 class User(db.Model):
     __tablename__ = "users"
@@ -9,7 +16,7 @@ class User(db.Model):
     username = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(100), unique=True, nullable=False)
     password = db.Column(db.String(100), nullable=False)
-    gender = db.Column(db.String(10), nullable=False)
+    gender = db.Column(postgreenum(Gender), nullable=False)
     address = db.Column(db.String(200), nullable=False)
     mobile_no = db.Column(db.String(10), nullable=False)
     role = db.Column(ARRAY(db.String), default="user")

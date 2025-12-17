@@ -9,9 +9,9 @@ def test_signup_success(client):
         "username": "Chetan123",
         "email": "test@example.com",
         "password": "Password@123",
-        "gender": "M",
+        "gender": "Male",
         "address": "Delhi",
-        "mobile_no": "9999999999",
+        "mobile_no": "99999999",
         "role": ["user"]
     }
 
@@ -34,7 +34,7 @@ def test_signup_existing_user(client):
         username="OldUser",
         email="old@example.com",
         password=bcrypt.generate_password_hash("Password@123").decode("utf-8"),
-        gender="M",
+        gender="Male",
         address="India",
         mobile_no="8888888888",
         role=["user"]
@@ -46,7 +46,7 @@ def test_signup_existing_user(client):
         "username": "Anything",
         "email": "old@example.com",
         "password": "Password@123",
-        "gender": "M",
+        "gender": "Male",
         "address": "Delhi",
         "mobile_no": "1111111111",
         "role": ["user"]
@@ -61,7 +61,7 @@ def test_signup_invalid_username(client):
         "username": "!!!@@@#",          
         "email": "valid@example.com",
         "password": "Password@123",
-        "gender": "M",
+        "gender": "Male",
         "address": "Delhi",
         "mobile_no": "9999999999",
         "role": ["user"]
@@ -76,7 +76,7 @@ def test_signup_invalid_password(client):
         "username": "ValidUser123",
         "email": "valid@pass.com",
         "password": "weakpass",         
-        "gender": "M",
+        "gender": "Male",
         "address": "Delhi",
         "mobile_no": "99999999",
         "role": ["user"]
@@ -104,7 +104,7 @@ def create_test_user():
         username="tester",
         email="test@example.com",
         password=hashed,
-        gender="male",
+        gender="Male",
         address="India",
         mobile_no="9999999999",
         role="user"

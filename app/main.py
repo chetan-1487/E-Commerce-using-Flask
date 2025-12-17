@@ -15,6 +15,9 @@ def createApp(test_config=None, testing=False) -> Flask:
 
     app.config.from_object(Config)
 
+    if testing:
+        app.config["SQLALCHEMY_DATABASE_URI"]="postgresql://postgres:chetan@localhost:5432/test"
+
     CORS(app, resources={r"/*":{"origins":"*"}})
 
     limiter.init_app(app)

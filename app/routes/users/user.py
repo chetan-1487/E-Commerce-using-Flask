@@ -6,7 +6,7 @@ from flask import (
 )
 from flask.wrappers import Response
 from app.extension import limiter
-from app.models.users import User
+from app.models.users import User, Gender
 from app.extension import db, bcrypt
 from flask_jwt_extended import (
     create_access_token,
@@ -26,6 +26,28 @@ user_bp = Blueprint(
     "users", __name__, template_folder=".../templates", static_folder=".../static"
 )
 
+ROLE_PERMISSION={
+    "admin":["signup","update","delete"],
+    "user":["all"]
+}
+
+def permission(*roles):
+    def wrapper(func):
+        @wraps(func)
+        def decorator(*args, **kwargs):
+            verify_jwt_in_request(locations=["headers","cookies"])
+            user = get_jwt()
+            role = user.get(roles, [])
+
+            permission = ROLE_PERMISSION.get(role)
+            if roles not in permission:
+                return jsonify({"message":"only admin can create, update adn delete users"})
+            return func(*args,**kwargs)
+        return decorator
+    return wrapper
+
+
+
 def role_require(*roles):
     def wrapper(fn):
         @wraps(fn)
@@ -34,7 +56,7 @@ def role_require(*roles):
             user = get_jwt()
             role = user.get("roles", [])
             if not any(r in roles for r in role):
-                resp = make_response(jsonify({"message":"permission denied"}))
+                resp = make_response(jsonify({"message":"permission denied, only admin take action"}))
                 unset_access_cookies(resp)
                 unset_refresh_cookies(resp)
                 return resp
@@ -62,9 +84,14 @@ def signup() -> Response:
     mobile_no = data.get("mobile_no")
     roles = data.get("role", [])
 
+    try:
+        Gender(gender)
+    except ValueError:
+        return jsonify({"message":"gender value should be Male, Female and Others"})
+
     userCheck = User.query.filter_by(email=email).first()
     if userCheck:
-        return jsonify({"message":"user already exist."})
+        return jsonify({"message":"user already exist."}), 200
 
     if not is_valid_username(username):
         return jsonify({"message":"username must be alphanumeric.."})
@@ -225,4 +252,30 @@ def all() -> Response:
         "total": len(users_list),
         "users": users_list
     })
+
+
+@user_bp.route("/update/<int:id>", methods=["PUT"])
+@permission("admin")
+def update(id):
+    data = request.get_json()
+
+    if not data:
+        return jsonify({"error": "JSON body is required"}), 400
+
+    user = User.query.filter_by(id=id).first()
+
+    if not user:
+        return jsonify({"error": "Hotel record not found"}), 404
+
+    for key, value in data.items():
+        if hasattr(user, key):
+            setattr(user, key, value)
+
+    db.session.commit()
+
+    return jsonify({
+        "message": "Update successful",
+        "updated_id": id,
+        "updated_data": data
+    }), 200
 
